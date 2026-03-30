@@ -1,24 +1,25 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, Play, Clock, MessageSquare, MoreVertical, Loader2, Trash2 } from 'lucide-react';
+import { Search, Play, Clock, Loader2, Trash2, LayoutGrid, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function VideoLibrary() {
-  const [videos, setVideos] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [videos, setVideos]           = useState([]);
+  const [loading, setLoading]         = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode]       = useState('grid'); // 'grid' | 'list'
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchVideos = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/videos');
-        if (response.ok) {
-          const data = await response.json();
-          const all = [...(data.active || []), ...(data.done || [])];
-          setVideos(all);
+        const res  = await fetch('http://localhost:5000/api/videos');
+        if (res.ok) {
+          const data = await res.json();
+          setVideos([...(data.active || []), ...(data.done || [])]);
         }
-      } catch (error) {
-        console.error("Fetch failed", error);
+      } catch (err) {
+        console.error('Fetch failed', err);
       } finally {
         setLoading(false);
       }
@@ -28,118 +29,188 @@ export default function VideoLibrary() {
 
   const handleDelete = async (e, id) => {
     e.stopPropagation();
-    if (!window.confirm("Are you sure you want to delete this video? This cannot be undone.")) return;
-
+    if (!window.confirm('Delete this video? This cannot be undone.')) return;
     try {
       const res = await fetch(`http://localhost:5000/api/videos/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setVideos(prev => prev.filter(v => v.id !== id));
-      }
+      if (res.ok) setVideos((prev) => prev.filter((v) => v.id !== id));
     } catch (err) {
-      console.error("Delete failed:", err);
+      console.error('Delete failed:', err);
     }
   };
 
-  const filteredVideos = videos.filter(v => 
+  const fmtDuration = (d) => {
+    if (!d) return '0:00';
+    const mins = Math.floor(d / 60);
+    const secs = Math.floor(d % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
+
+  const filtered = videos.filter((v) =>
     v.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   if (loading) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-gray-500">
-        <Loader2 className="w-8 h-8 animate-spin mb-4 text-cb-orange" />
-        <p>Opening Vault...</p>
+      <div className="h-full flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-5 h-5 animate-spin text-cb-dim" strokeWidth={1.5} />
+          <p className="text-xs text-cb-faint font-mono tracking-widest uppercase">Loading library…</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full flex flex-col pt-6 pb-2">
-      <header className="mb-8 flex items-center justify-between">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex flex-col h-full"
+    >
+      {/* Header */}
+      <header className="flex items-center justify-between mb-6 flex-shrink-0">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2">Video Library</h1>
-          <p className="text-gray-400 text-sm">All uploaded sequences and raw footage.</p>
+          <h1 className="text-[22px] font-semibold tracking-tight text-cb-text leading-none mb-1">
+            Video Library
+          </h1>
+          <p className="text-xs text-cb-faint font-mono">
+            {filtered.length} video{filtered.length !== 1 ? 's' : ''}
+          </p>
         </div>
-        <div className="flex items-center gap-4">
+
+        <div className="flex items-center gap-2">
+          {/* Search */}
           <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-            <input 
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-cb-faint" strokeWidth={1.8} />
+            <input
               type="text"
-              placeholder="Search library..."
+              placeholder="Search…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-2 text-sm text-white focus:outline-none focus:border-cb-orange/50 w-64"
+              className="bg-cb-surface border border-cb-border rounded-lg pl-8 pr-4 py-2 text-xs text-cb-text placeholder:text-cb-faint focus:outline-none focus:border-cb-subtle transition-colors w-52"
             />
           </div>
-          <button className="p-2 bg-gray-900 border border-gray-800 rounded-xl text-gray-400 hover:text-white transition-colors">
-            <Filter size={18} />
-          </button>
+
+          {/* View toggle */}
+          <div className="flex border border-cb-border rounded-lg overflow-hidden">
+            {[['grid', LayoutGrid], ['list', List]].map(([mode, Icon]) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`p-2 transition-colors ${
+                  viewMode === mode
+                    ? 'bg-cb-muted text-cb-text'
+                    : 'text-cb-faint hover:text-cb-dim'
+                }`}
+              >
+                <Icon size={14} strokeWidth={1.8} />
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
-      {filteredVideos.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-800 rounded-3xl p-20 text-center">
-          <div className="w-20 h-20 bg-gray-900 rounded-full flex items-center justify-center mb-6">
-            <Play size={40} className="text-gray-700" />
+      {/* Empty state */}
+      {filtered.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-cb-border rounded-xl text-center py-20">
+          <div className="w-12 h-12 rounded-xl border border-cb-border bg-cb-panel flex items-center justify-center mb-4">
+            <Play size={20} className="text-cb-faint" strokeWidth={1.5} />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">No videos found</h2>
-          <p className="text-gray-500 max-w-sm">No matches or the library is empty. Go to Projects to upload your first footage.</p>
-          <button 
-            onClick={() => navigate('/app/projects')}
-            className="mt-6 btn-primary px-8 py-2"
-          >
-            Go to Kanban
-          </button>
+          <p className="text-sm font-medium text-cb-text mb-1">No videos found</p>
+          <p className="text-xs text-cb-faint mb-5">
+            {searchQuery ? 'Try a different search term.' : 'Upload your first footage on the board.'}
+          </p>
+          {!searchQuery && (
+            <button onClick={() => navigate('/app/projects')} className="btn-ghost text-xs">
+              Go to Board
+            </button>
+          )}
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-10">
-          {filteredVideos.map((v) => (
-            <div 
-              key={v.id} 
-              onClick={() => navigate(`/app/videos/${v.id}`)}
-              className="glass-card group cursor-pointer hover:border-cb-orange/50 transition-all overflow-hidden flex flex-col"
-            >
-              <div className="aspect-video bg-gray-900 relative overflow-hidden">
-                {/* Thumbnail Layer */}
-                {v.thumbnailurl ? (
-                  <img src={v.thumbnailurl} className="w-full h-full object-cover transition-transform group-hover:scale-105" alt="" />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Play size={32} className="text-gray-700 group-hover:text-cb-orange transition-colors" />
+      ) : viewMode === 'grid' ? (
+        /* Grid */
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 pb-10">
+          <AnimatePresence>
+            {filtered.map((v, i) => (
+              <motion.div
+                key={v.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                onClick={() => navigate(`/app/videos/${v.id}`)}
+                className="card card-hover group cursor-pointer overflow-hidden flex flex-col"
+              >
+                <div className="aspect-video bg-cb-muted relative overflow-hidden">
+                  {v.thumbnailurl ? (
+                    <img
+                      src={v.thumbnailurl}
+                      className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
+                      alt=""
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Play size={24} className="text-cb-faint group-hover:text-cb-dim transition-colors" strokeWidth={1.5} />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-cb-panel/60 to-transparent" />
+                  <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-cb-black/70 px-1.5 py-0.5 rounded text-[10px] font-mono text-cb-dim backdrop-blur-sm">
+                    <Clock size={9} />
+                    {fmtDuration(v.duration)}
                   </div>
-                )}
-                
-                <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-[10px] font-mono text-white flex items-center gap-1 backdrop-blur-sm">
-                  <Clock size={10} /> {v.duration ? `${Math.floor(v.duration / 60)}:${Math.floor(v.duration % 60).toString().padStart(2, '0')}` : '0:00'}
-                </div>
-                
-                <div className="absolute top-2 left-2 flex gap-2">
-                  <span className="bg-cb-orange text-white text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">v{v.versionnum}</span>
-                  <button 
+                  <button
                     onClick={(e) => handleDelete(e, v.id)}
-                    className="p-1.5 bg-red-500/80 hover:bg-red-600 text-white rounded-lg backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
-                    title="Delete Video"
+                    className="absolute top-2 right-2 p-1.5 bg-cb-red/80 hover:bg-cb-red text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                    title="Delete"
                   >
-                    <Trash2 size={12} />
+                    <Trash2 size={11} strokeWidth={2} />
                   </button>
                 </div>
-              </div>
 
-              <div className="p-4 flex-1 flex flex-col gap-3">
-                <div className="flex justify-between items-start gap-2">
-                  <h3 className="text-white font-medium text-sm line-clamp-1 flex-1">{v.title}</h3>
-                  <button className="text-gray-600 hover:text-white transition-colors"><MoreVertical size={16} /></button>
+                <div className="p-3 flex flex-col gap-1">
+                  <h3 className="text-[13px] font-medium text-cb-text truncate">{v.title}</h3>
+                  <p className="text-[10px] font-mono text-cb-faint">
+                    {new Date(v.createdat).toLocaleDateString()}
+                  </p>
                 </div>
-                
-                <div className="mt-auto pt-3 border-t border-gray-800 flex items-center justify-between text-gray-500 text-[10px]">
-                  <div className="flex items-center gap-1"><MessageSquare size={12} /> 0</div>
-                  <div className="font-mono">{new Date(v.createdat).toLocaleDateString()}</div>
-                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      ) : (
+        /* List */
+        <div className="flex flex-col divide-y divide-cb-border border border-cb-border rounded-xl overflow-hidden">
+          {filtered.map((v, i) => (
+            <motion.div
+              key={v.id}
+              initial={{ opacity: 0, x: -6 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.03 }}
+              onClick={() => navigate(`/app/videos/${v.id}`)}
+              className="flex items-center gap-4 px-4 py-3 bg-cb-surface hover:bg-cb-panel cursor-pointer group transition-colors"
+            >
+              <div className="w-16 h-10 rounded-md bg-cb-muted relative overflow-hidden shrink-0">
+                {v.thumbnailurl
+                  ? <img src={v.thumbnailurl} className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity" alt="" />
+                  : <Play size={14} className="absolute inset-0 m-auto text-cb-faint" strokeWidth={1.5} />
+                }
               </div>
-            </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-medium text-cb-text truncate">{v.title}</p>
+                <p className="text-[10px] font-mono text-cb-faint mt-0.5">{new Date(v.createdat).toLocaleDateString()}</p>
+              </div>
+              <div className="flex items-center gap-1 text-[10px] font-mono text-cb-faint shrink-0">
+                <Clock size={10} strokeWidth={1.8} />
+                {fmtDuration(v.duration)}
+              </div>
+              <button
+                onClick={(e) => handleDelete(e, v.id)}
+                className="shrink-0 p-1.5 text-cb-faint hover:text-cb-red transition-colors opacity-0 group-hover:opacity-100"
+                title="Delete"
+              >
+                <Trash2 size={13} strokeWidth={1.8} />
+              </button>
+            </motion.div>
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
