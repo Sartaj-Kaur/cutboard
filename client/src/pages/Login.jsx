@@ -1,72 +1,96 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
-import { Video, ArrowRight, Lock } from 'lucide-react';
+import { ArrowRight, Scissors } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const { setUser } = useAuthStore();
-  const navigate = useNavigate();
+  const navigate    = useNavigate();
 
-  const handleMockLogin = (e) => {
+  const handleLogin = (e) => {
     e.preventDefault();
-    // Bypassing real auth to get straight to product as requested
-    setUser({ id: '1', name: 'Demo User', email: email || 'demo@cutboard.com', role: 'EDITOR' }, 'mock-token');
+    setUser(
+      { id: '1', name: 'Demo User', email: email || 'demo@cutboard.io', role: 'EDITOR' },
+      'mock-token'
+    );
     navigate('/app');
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-cb-black p-4 relative overflow-hidden">
-      {/* Cinematic Glow Context */}
-      <div className="absolute top-[20%] left-[20%] w-[40vw] h-[40vw] rounded-full bg-cb-orange opacity-[0.05] blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-[20%] right-[20%] w-[30vw] h-[30vw] rounded-full bg-cb-amber opacity-[0.03] blur-[100px] pointer-events-none" />
-      
-      <div className="w-full max-w-md glass-card p-10 relative z-10">
-        <Link to="/" className="flex items-center justify-center mb-8 space-x-3 hover:opacity-80 transition-all cursor-pointer group">
-          <div className="text-cb-orange group-hover:scale-110 transition-transform">
-            <Video size={40} strokeWidth={2.5} />
+      {/* Subtle grid background */}
+      <div
+        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.5) 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }}
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="w-full max-w-sm relative z-10"
+      >
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2.5 justify-center mb-10 group">
+          <div className="w-8 h-8 rounded-lg bg-cb-accent/15 border border-cb-accent/30 flex items-center justify-center group-hover:border-cb-accent/60 transition-colors">
+            <Scissors size={16} className="text-cb-accent" strokeWidth={2} />
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-white to-gray-400 text-transparent bg-clip-text">CutBoard</h1>
+          <span className="text-lg font-semibold tracking-tight text-cb-text">
+            Cut<span className="text-cb-accent">board</span>
+          </span>
         </Link>
 
-        <form onSubmit={handleMockLogin} className="space-y-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-400">Email (Random OK for Demo)</label>
-            <input 
-              type="text" 
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-cb-black/50 border border-gray-700/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cb-orange/50 focus:ring-1 focus:ring-cb-orange/50 transition-all placeholder:text-gray-600"
-              placeholder="demo@startup.com"
-            />
+        {/* Card */}
+        <div className="bg-cb-surface border border-cb-border rounded-xl overflow-hidden">
+          <div className="px-6 py-5 border-b border-cb-border">
+            <h1 className="text-[15px] font-semibold text-cb-text">Sign in to your workspace</h1>
+            <p className="text-xs text-cb-faint mt-0.5">Demo mode — any credentials work</p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-400">Password</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-cb-black/50 border border-gray-700/50 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cb-orange/50 focus:ring-1 focus:ring-cb-orange/50 transition-all placeholder:text-gray-600"
-              placeholder="Any password..."
-            />
-          </div>
+          <form onSubmit={handleLogin} className="px-6 py-5 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-cb-dim">Email</label>
+              <input
+                type="text"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="demo@cutboard.io"
+                className="w-full bg-cb-panel border border-cb-border rounded-lg px-3 py-2.5 text-sm text-cb-text placeholder:text-cb-faint focus:outline-none focus:border-cb-subtle transition-colors"
+              />
+            </div>
 
-          <button 
-            type="submit" 
-            className="w-full btn-primary flex items-center justify-center space-x-2 py-3 mt-4"
-          >
-            <span>Enter Studio</span>
-            <ArrowRight size={18} />
-          </button>
-        </form>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-cb-dim">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Any password…"
+                className="w-full bg-cb-panel border border-cb-border rounded-lg px-3 py-2.5 text-sm text-cb-text placeholder:text-cb-faint focus:outline-none focus:border-cb-subtle transition-colors"
+              />
+            </div>
 
-        <p className="mt-6 text-xs text-center text-gray-500 flex items-center justify-center space-x-1">
-          <Lock size={12} />
-          <span>Demo authentication bypassed for testing</span>
+            <button
+              type="submit"
+              className="w-full btn-primary justify-center py-2.5 mt-2"
+            >
+              Continue
+              <ArrowRight size={14} strokeWidth={2} />
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-[11px] text-cb-faint mt-5 font-mono">
+          Demo authentication — no real data is stored
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

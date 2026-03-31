@@ -1,172 +1,209 @@
-import React, { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { X, Upload, Film, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function UploadModal({ isOpen, onClose, onUploadSuccess }) {
-  const [file, setFile] = useState(null);
+  const [file, setFile]           = useState(null);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError]         = useState(null);
 
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
+    if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
+    else if (e.type === 'dragleave') setDragActive(false);
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      validateAndSetFile(e.dataTransfer.files[0]);
-    }
+    if (e.dataTransfer.files?.[0]) validateAndSetFile(e.dataTransfer.files[0]);
   };
 
   const handleChange = (e) => {
-    e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
-      validateAndSetFile(e.target.files[0]);
-    }
+    if (e.target.files?.[0]) validateAndSetFile(e.target.files[0]);
   };
 
-  const validateAndSetFile = (selectedFile) => {
-    if (!selectedFile.type.startsWith('video/')) {
-      setError("Please select a valid video file.");
-      setFile(null);
+  const validateAndSetFile = (f) => {
+    if (!f.type.startsWith('video/')) {
+      setError('Please select a valid video file.');
       return;
     }
     setError(null);
-    setFile(selectedFile);
+    setFile(f);
   };
 
   const handleSubmit = async () => {
     if (!file) return;
-
     setUploading(true);
     setError(null);
-
     const formData = new FormData();
     formData.append('video', file);
-
     try {
-      const response = await fetch('http://localhost:5000/api/videos/upload', {
+      const res = await fetch('http://localhost:5000/api/videos/upload', {
         method: 'POST',
         body: formData,
       });
-
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
-
-      const data = await response.json();
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
       onUploadSuccess(data.video);
       onClose();
       setFile(null);
-    } catch (err) {
-      setError("Failed to upload video. Make sure the server is running.");
+    } catch {
+      setError('Upload failed. Make sure the server is running.');
     } finally {
       setUploading(false);
     }
   };
 
-  if (!isOpen) return null;
+  const handleClose = () => {
+    if (uploading) return;
+    setFile(null);
+    setError(null);
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-cb-black border border-gray-800 w-full max-w-xl rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-300">
-        {/* Header */}
-        <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-gray-900/50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-cb-orange/10 rounded-lg">
-              <Upload className="w-5 h-5 text-cb-orange" />
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+          onClick={handleClose}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            onClick={(e) => e.stopPropagation()}
+            className="bg-cb-surface border border-cb-border w-full max-w-lg rounded-xl overflow-hidden shadow-2xl"
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-cb-border">
+              <div className="flex items-center gap-2.5">
+                <Upload size={15} className="text-cb-dim" strokeWidth={1.8} />
+                <h2 className="text-sm font-semibold text-cb-text">Upload footage</h2>
+              </div>
+              <button
+                onClick={handleClose}
+                className="text-cb-faint hover:text-cb-text transition-colors p-1 rounded-md hover:bg-cb-muted"
+              >
+                <X size={15} strokeWidth={1.8} />
+              </button>
             </div>
-            <h2 className="text-xl font-bold text-white">Upload New Footage</h2>
-          </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
 
-        {/* Content */}
-        <div className="p-8">
-          <div 
-            onDragEnter={handleDrag}
-            className={`relative border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-all ${
-              dragActive ? 'border-cb-orange bg-cb-orange/5' : 'border-gray-800 hover:border-gray-700 bg-gray-900/20'
-            } ${file ? 'border-green-500/50 bg-green-500/5' : ''}`}
-          >
-            <input
-              type="file"
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              onChange={handleChange}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-              accept="video/*"
-            />
-            
-            {!file ? (
-              <>
-                <div className="w-16 h-16 bg-gray-800 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                  <Film className="w-8 h-8 text-gray-400" />
-                </div>
-                <p className="text-white font-medium mb-1">Click to upload or drag and drop</p>
-                <p className="text-gray-500 text-sm">MP4, MOV or WebM (Max 500MB)</p>
-              </>
-            ) : (
-              <>
-                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
-                  <CheckCircle2 className="w-8 h-8 text-green-500" />
-                </div>
-                <p className="text-white font-medium mb-1">{file.name}</p>
-                <p className="text-gray-500 text-sm">{(file.size / (1024 * 1024)).toFixed(2)} MB • Ready to process</p>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setFile(null); }}
-                  className="mt-4 text-xs text-cb-orange hover:underline"
-                >
-                  Change file
-                </button>
-              </>
-            )}
-          </div>
+            {/* Drop zone */}
+            <div className="p-5">
+              <div
+                onDragEnter={handleDrag}
+                className={`relative border border-dashed rounded-lg p-10 flex flex-col items-center justify-center transition-all duration-200 ${
+                  dragActive
+                    ? 'border-cb-accent/70 bg-cb-accent/5'
+                    : file
+                    ? 'border-cb-green/50 bg-cb-green/5'
+                    : 'border-cb-border hover:border-cb-subtle bg-cb-panel/40'
+                }`}
+              >
+                <input
+                  type="file"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  onChange={handleChange}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  accept="video/*"
+                />
 
-          {error && (
-            <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3 text-red-500 text-sm">
-              <AlertCircle className="w-4 h-4" />
-              {error}
+                <AnimatePresence mode="wait">
+                  {!file ? (
+                    <motion.div
+                      key="empty"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex flex-col items-center text-center"
+                    >
+                      <div className="w-12 h-12 rounded-xl border border-cb-border bg-cb-muted flex items-center justify-center mb-4">
+                        <Film size={20} className="text-cb-faint" strokeWidth={1.5} />
+                      </div>
+                      <p className="text-sm font-medium text-cb-text mb-1">
+                        Drop video here or click to browse
+                      </p>
+                      <p className="text-xs text-cb-faint">MP4, MOV, WebM — max 500 MB</p>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="selected"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex flex-col items-center text-center"
+                    >
+                      <div className="w-12 h-12 rounded-xl border border-cb-green/30 bg-cb-green/10 flex items-center justify-center mb-4">
+                        <CheckCircle2 size={20} className="text-cb-green" strokeWidth={1.5} />
+                      </div>
+                      <p className="text-sm font-medium text-cb-text mb-1 max-w-[240px] truncate">
+                        {file.name}
+                      </p>
+                      <p className="text-xs text-cb-faint mb-3">
+                        {(file.size / (1024 * 1024)).toFixed(2)} MB · Ready to upload
+                      </p>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                        className="text-xs text-cb-faint hover:text-cb-dim underline-offset-2 hover:underline transition-colors"
+                      >
+                        Change file
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Error */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="mt-3 flex items-center gap-2 text-cb-red text-xs bg-cb-red/8 border border-cb-red/20 rounded-lg px-3 py-2.5"
+                  >
+                    <AlertCircle size={13} strokeWidth={1.8} />
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="p-6 bg-gray-900/50 border-t border-gray-800 flex justify-end gap-3">
-          <button 
-            onClick={onClose}
-            className="px-6 py-2 text-gray-400 hover:text-white transition-colors text-sm font-medium"
-          >
-            Cancel
-          </button>
-          <button 
-            onClick={handleSubmit}
-            disabled={!file || uploading}
-            className={`btn-primary px-8 py-2 flex items-center gap-2 ${(!file || uploading) ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              'Start Upload'
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-cb-border">
+              <button onClick={handleClose} className="btn-ghost text-xs">
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!file || uploading}
+                className={`btn-primary text-xs ${(!file || uploading) ? 'opacity-40 cursor-not-allowed' : ''}`}
+              >
+                {uploading ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    Uploading…
+                  </>
+                ) : (
+                  'Upload'
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
