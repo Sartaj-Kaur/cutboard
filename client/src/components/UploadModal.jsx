@@ -3,17 +3,18 @@ import { X, Upload, Film, CheckCircle2, AlertCircle, Loader2 } from 'lucide-reac
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function UploadModal({ isOpen, onClose, onUploadSuccess }) {
-  const [file, setFile]           = useState(null);
+  const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [error, setError]         = useState(null);
+  const [error, setError] = useState(null);
 
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === 'dragenter' || e.type === 'dragover') setDragActive(true);
     else if (e.type === 'dragleave') setDragActive(false);
-  };
+  }
+
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -101,13 +102,12 @@ export default function UploadModal({ isOpen, onClose, onUploadSuccess }) {
             <div className="p-5">
               <div
                 onDragEnter={handleDrag}
-                className={`relative border border-dashed rounded-lg p-10 flex flex-col items-center justify-center transition-all duration-200 ${
-                  dragActive
+                className={`relative border border-dashed rounded-lg p-10 flex flex-col items-center justify-center transition-all duration-200 ${dragActive
                     ? 'border-cb-accent/70 bg-cb-accent/5'
                     : file
-                    ? 'border-cb-green/50 bg-cb-green/5'
-                    : 'border-cb-border hover:border-cb-subtle bg-cb-panel/40'
-                }`}
+                      ? 'border-cb-green/50 bg-cb-green/5'
+                      : 'border-cb-border hover:border-cb-subtle bg-cb-panel/40'
+                  }`}
               >
                 <input
                   type="file"
